@@ -1,0 +1,10 @@
+# Statistics basics
+## Autocorrelation vs independence
+We define correlation as $corr(X,Y) = \frac{cov(X,Y)}{Var(x)Var(Y)}$. Covariance is defined as
+$$cov(X,Y) = E[(X-EX)(Y-EY)] = E(XY) - EX \cdot EY.$$
+
+Indepndence means exactly that joint distribution of variables is equal to the product of individual distributions:
+
+$$f_{XY}(x,y) = f_X(x)f_Y(y),$$
+
+which implies that expected values meet the same condition and that $E(XY) = E(X)E(Y)$. It implies zero covariance, but it doesn't have to be the other way.
