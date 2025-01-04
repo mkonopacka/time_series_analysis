@@ -1,7 +1,8 @@
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(forecast)
 library(ggplot2)
 library(tidyr)
+library(gridExtra)
 ```
 
 # Types of noise 
@@ -35,12 +36,18 @@ mean(white_noise2)
 var(white_noise2) # 1/3 is a theoretical value
 ```
 
-## AR(p) processes
+## Autoreggresive Processes AR(p)
 The Autoregressive process is given by the equation
 
 $$X_t = \sum^p_{i=1} \theta_i X_{t-i} + w_t.$$
 
-```{r, fig.width = 16, fig.height = 5}
+### AR(1)
+AR(1) process
+$$X_t = \theta X_{t-1} + w_t$$
+
+is stationary if $|\theta| < 1$. In R we can simulate such process using `arima.sim` function. Greater absolute value results in greater "amplitude" and negative theta causes oscilations from positive to negative.
+
+```{r, fig.width = 18, fig.height = 5}
 N <- 200
 ar1_processes <- matrix(nrow = 7, ncol = N)
 ar1_processes[1,] <- 1:N
@@ -56,10 +63,38 @@ ar1_processes[7,] <- arima.sim(model = list(ar = c(-0.9)), n = N)
 
 ar1_processes <- as.data.frame(t(ar1_processes)) 
 colnames(ar1_processes) <- c(
-  "time", "theta = 0.1", "theta = 0.5", "theta = 0.9", "theta = -0.1", "theta = -0.5", "theta = -0.9")
+  "time", "theta_0.1", "theta_0.5", "theta_0.9", "theta_-0.1", "theta_-0.5", "theta_-0.9")
 
 ar1_processes %>% pivot_longer(cols = 2:7) %>% 
   ggplot(aes(x = time, y = value, col = name)) +
-  geom_line() + ggtitle("AR(1) processes with different coefficient (only stationary, i.e. |theta| < 1 allowed by arima.sim)")
+  geom_line() + 
+  ggtitle("AR(1) processes with different coefficient (only stationary, i.e. |theta| < 1 allowed by arima.sim)") +
+  theme(legend.position = "bottom")
 ```
+
+
+```{r, fig.width= 12, fig.height = 4}
+ar1_acfs <- list()
+for (name in colnames(ar1_processes)[-1]){
+  ar1_acfs[[name]] <- ar1_processes[name] %>% ggAcf() +
+    ggtitle(paste("AR(1) with", name))
+}
+
+gridExtra::grid.arrange(
+  grobs = ar1_acfs, nrow = 2, top = "ACF plots for AR(1) process with different theta")
+```
+
+
+```{r, fig.width= 12, fig.height = 4}
+ar1_pacfs <- list()
+for (name in colnames(ar1_processes)[-1]){
+  ar1_pacfs[[name]] <- ar1_processes[name] %>% ggPacf() +
+    ggtitle(paste("AR(1) with", name))
+}
+
+gridExtra::grid.arrange(
+  grobs = ar1_pacfs, nrow = 2, top = "PACF plots for AR(1) process with different theta")
+```
+
+
 
