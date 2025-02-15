@@ -47,11 +47,13 @@ ar1_processes <- as.data.frame(t(ar1_processes))
 colnames(ar1_processes) <- c(
   "time", "phi_0.1", "phi_0.5", "phi_0.9", "phi_-0.1", "phi_-0.5", "phi_-0.9")
 
-ar1_processes %>% pivot_longer(cols = 2:7) %>% 
+plot_different_AR1 <- ar1_processes %>% pivot_longer(cols = 2:7) %>% 
   ggplot(aes(x = time, y = value, col = name)) +
   geom_line() + 
   ggtitle("AR(1) processes with different coefficient (only stationary, i.e. |phi| < 1 allowed by arima.sim)") +
   theme(legend.position = "bottom")
+
+plot_different_AR1
 ```
 
 
@@ -86,26 +88,85 @@ gridExtra::grid.arrange(
   grobs = ar1_pacfs, nrow = 2, top = "PACF plots for AR(1) process with different phi")
 ```
 
-### Random walk
-AR(1) process with an unit root $\phi = 1$ is called a random walk. It's expected value is $E(X_t) = t\mu$, where $w_t \sim N(\mu, \sigma^2)$ and it's variance is $Var(X_t) = \sum^t_{i=1} Var(w_t) = t\sigma^2$, therefore it is not stationary.
+### How to generate AR(1) process
+```{r, fig.width = 15, fig.height = 40}
+generate_AR_1 <- function(phi, sigma, n){
+  epsilons <- rnorm(1+n, sd = sigma)
+  for (i in 2:(n+1)){
+    epsilons[i] <- epsilons[i] + phi*epsilons[i-1]
+  }
+  return(epsilons[-1])
+} 
+
+N <- 200
+nsim <- 300
+nplots <- 20
+AR_1_by_hand <- lapply(1:nsim, function(x){generate_AR_1(phi = 0.9, sigma = 1, n = N)})
+AR_1_builtin <- lapply(1:nsim, function(x){arima.sim(model = list(ar = c(0.9)), n = N)})
+AR1_simulations <- list()
+for (i in 1:nplots){
+  # left column
+  Y <- AR_1_by_hand[[i]]
+  AR1_simulations[[2*i-1]] <- ggplot(
+      data.frame(y = Y, x = 1:N)) +
+    geom_line(aes(x,y)) +
+    ggtitle(paste("By hand. sigma = ", round(sd(Y), 2), "mean = ", round(mean(Y),2))) +
+    geom_hline(yintercept = mean(Y), col = "red") +
+    scale_y_continuous(breaks = seq(-8,8,2), limits = c(-8,8))
+  
+  # right column
+  Y <- AR_1_builtin[[i]]
+  AR1_simulations[[2*i]] <- 
+    ggplot(data.frame(y = Y, x = 1:N)) +
+    geom_line(aes(x,y)) +
+    ggtitle(paste("Built-in. sigma = ", round(sd(Y), 2),"mean = ", round(mean(Y),2))) +
+    geom_hline(yintercept = mean(Y), col = "red") +
+    scale_y_continuous(breaks = seq(-8,8,2), limits = c(-8,8))
+}
+
+gridExtra::grid.arrange(
+  grobs = AR1_simulations, 
+  ncol = 2, top = "AR(1) processes phi = 0.9 simulation")
+```
 
 ```{r}
-# generate_AR <- function(AR_coefs, sigma, n){
-#   p <- length(AR_coefs)
-#   Y <- rnorm(p, sd = sigma)
-#   for (i in 1:(n-p)){
-#     Y_i <- AR_coefs %*% Y + epsilon_i
-#     Y <- c(Y, Y_i)
-#   }
-#   return(Y)
-# }
-# 
-# # AR(1)
-# X <- generate_AR(
-#   AR_coefs = c(0.5),
-#   sigma = 1,
-#   n = 200
-# )
+par(mfrow = c(1,2))
+AR_1_builtin %>% sapply(mean) %>% boxplot(main = "means, builtin method", ylim = c(-3,3))
+AR_1_by_hand %>% sapply(mean) %>% boxplot(main = "means, by hand", ylim = c(-3,3))
 ```
+
+```{r}
+par(mfrow = c(1,2))
+AR_1_builtin %>% sapply(sd) %>% boxplot(main = "sd, builtin method", ylim = c(1,3))
+AR_1_by_hand %>% sapply(sd) %>% boxplot(main = "sd, by hand", ylim = c(1,3))
+```
+
+### How to generate AR(p)?
+```{r}
+generate_AR_p <- function(AR_coefs, sigma, n){
+  # Y_t = sum(phi_i Y_t-i + epsilon_i)
+  p <- length(AR_coefs)
+  epsilons <- rnorm(n+p, sd = sigma)
+  for (i in 1:(n)){
+    Y_i <- AR_coefs %*% Y + rnorm(1, sd = sigma)
+    Y <- c(Y, Y_i)
+  }
+  return(Y)
+}
+
+# AR(1)
+X <- generate_AR(
+  AR_coefs = c(0.5),
+  sigma = 1,
+  n = 200
+)
+
+plot(X)
+```
+
+## Random walk
+AR(1) process with an unit root $\phi = 1$ is called a random walk. It's expected value is $E(X_t) = t\mu$, where $w_t \sim N(\mu, \sigma^2)$ and it's variance is $Var(X_t) = \sum^t_{i=1} Var(w_t) = t\sigma^2$, therefore it is not stationary.
+
+
 
 
