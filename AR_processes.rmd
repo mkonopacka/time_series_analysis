@@ -2,60 +2,23 @@
 output:
   github_document: default
 ---
-
 ```{r message=FALSE, warning=FALSE}
 library(forecast)
 library(ggplot2)
 library(tidyr)
 library(gridExtra)
 ```
-
-# Types of noise 
-## 1.1.1. White noise
-Variable $w_t$ is a white noise if it meets only three conditions: 
-- $E(w_t) = 0$,
-- $Var(w_t) = \sigma^2$,
-- $cov(w_t, w_s) = 0$.
-
-Note it doesn't have to be normally distributed (then we call it "gaussian noise") - but in many cases it is. 
-
-```{r, fig.width= 8, fig.height = 5}
-set.seed(0)
-white_noise = rnorm(200)
-tsdisplay(white_noise, plot.type = "histogram", points = FALSE)
-```
-
-```{r}
-mean(white_noise)
-var(white_noise)
-```
-
-```{r}
-set.seed(0) # for seed = 7 there is an accidental autocorrelation
-white_noise2 = runif(200, min = -1, max = 1)
-tsdisplay(white_noise2, plot.type = "histogram", points = FALSE)
-```
-
-```{r}
-mean(white_noise2)
-var(white_noise2) # 1/3 is a theoretical value
-```
-
-## Autoreggresive Processes AR(p)
+# Autoreggresive Processes AR(p)
 The Autoregressive process is given by the equation
 
 $$X_t = \sum^p_{i=1} \phi_i X_{t-i} + w_t.$$
 
-### AR(1)
+## Stationary AR(1)
 AR(1) process
 $$X_t = \phi X_{t-1} + w_t$$ 
 
+is stationary if $|\phi| < 1$. In R we can simulate such process using `arima.sim` function. Greater absolute value results in greater "amplitude" and negative phi causes oscilations from positive to negative. See page 87 of https://sistemas.fciencias.unam.mx/~ediaz/Cursos/Estadistica3/Libros/Time%20Series%20Analysis%20and%20Its%20Applications.pdf. The proof of stationarity is based on the following:
 
-is stationary if $|\phi| < 1$. In R we can simulate such process using `arima.sim` function. Greater absolute value results in greater "amplitude" and negative phi causes oscilations from positive to negative.
-
-See page 87 of https://sistemas.fciencias.unam.mx/~ediaz/Cursos/Estadistica3/Libros/Time%20Series%20Analysis%20and%20Its%20Applications.pdf.
-
-##### Proof of stationarity
 $$X_t = \phi X_{t-1} + w_t$$
 $$ X_t = \phi (\phi X_{t-2} + w_{t-1}) + w_t$$
 
@@ -64,7 +27,7 @@ $$ X_t = \phi (\phi (\phi X_{t-3} + w_{t-2}) + w_{t-1}) + w_t$$
 
 $$X_t = \phi^3 X_{t-3} + \phi^2 w_{t-2} + \phi w_{t-1} + w_t$$
 
-$$X_t = \phi^k X_{t-k} + \sum^k_{i=0} \phi^i w_{t-i}.$$
+$$X_t = \phi^k X_{t-k} + \sum^k_{i=0} \phi^i w_{t-i}. \quad (eq.1)$$
 
 ```{r, fig.width = 18, fig.height = 5}
 N <- 200
@@ -92,6 +55,14 @@ ar1_processes %>% pivot_longer(cols = 2:7) %>%
 ```
 
 
+### ACF of stationary AR(1) process
+It can be shown that the autocovariance of AR(1) process with $|\phi| < 1$ is given by the formula
+$$\gamma(h) = \frac{\sigma^2 \phi^h}{1 - \phi^2}.$$
+
+It can also be shown that for a stationary process, autocorrelation $\rho(h) = \frac{\gamma(h)}{\gamma(0)}$. The autocorrelation function for a stationary
+AR(1) process is simply
+$$\rho(h) = \phi^h.$$
+
 ```{r, fig.width= 12, fig.height = 4}
 ar1_acfs <- list()
 for (name in colnames(ar1_processes)[-1]){
@@ -115,12 +86,7 @@ gridExtra::grid.arrange(
   grobs = ar1_pacfs, nrow = 2, top = "PACF plots for AR(1) process with different phi")
 ```
 
-
-
-#### Stationary AR(1)
-
-
-#### Random walk
+### Random walk
 AR(1) process with an unit root $\phi = 1$ is called a random walk. It's expected value is $E(X_t) = t\mu$, where $w_t \sim N(\mu, \sigma^2)$ and it's variance is $Var(X_t) = \sum^t_{i=1} Var(w_t) = t\sigma^2$, therefore it is not stationary.
 
 ```{r}
